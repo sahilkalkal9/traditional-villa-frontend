@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Eye, Plus, Search, Trash2, X } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "@/utils/api";
@@ -35,12 +36,29 @@ const initialForm = {
 const money = (v) => `₹${Number(v || 0).toLocaleString("en-IN")}`;
 
 const Label = ({ children }) => (
-  <label className="mb-1.5 block text-xs font-semibold text-[#6b7280]">
+  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#6b7280] sm:text-xs">
     {children}
   </label>
 );
 
+const openDatePicker = (ref) => {
+  if (!ref?.current) return;
+
+  if (typeof ref.current.showPicker === "function") {
+    ref.current.showPicker();
+  } else {
+    ref.current.focus();
+  }
+};
+
 export default function BookingsPage() {
+  const router = useRouter();
+
+  const filterFromRef = useRef(null);
+  const filterToRef = useRef(null);
+  const checkInRef = useRef(null);
+  const checkOutRef = useRef(null);
+
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -60,6 +78,26 @@ export default function BookingsPage() {
     type: "",
   });
 
+  const logoutAndRedirect = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    toast.error("Session expired. Please login again.");
+    router.replace("/login");
+  };
+
+  const handleApiError = (error, fallbackMessage) => {
+    const status = error?.response?.status;
+
+    if (status === 401 || status === 403) {
+      logoutAndRedirect();
+      return true;
+    }
+
+    toast.error(error?.response?.data?.message || fallbackMessage);
+    return false;
+  };
+
   const fetchBookings = async () => {
     try {
       setLoading(true);
@@ -72,7 +110,7 @@ export default function BookingsPage() {
       const { data } = await api.get("/bookings", { params });
       setBookings(data.bookings || []);
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Bookings load failed");
+      handleApiError(error, "Bookings load failed");
     } finally {
       setLoading(false);
     }
@@ -80,6 +118,7 @@ export default function BookingsPage() {
 
   useEffect(() => {
     fetchBookings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleChange = (e) => {
@@ -243,7 +282,7 @@ export default function BookingsPage() {
       setModalOpen(false);
       fetchBookings();
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Save failed");
+      handleApiError(error, "Save failed");
     } finally {
       setSaving(false);
     }
@@ -258,7 +297,7 @@ export default function BookingsPage() {
       toast.success("Booking deleted");
       fetchBookings();
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Delete failed");
+      handleApiError(error, "Delete failed");
     }
   };
 
@@ -273,77 +312,108 @@ export default function BookingsPage() {
         : "bg-slate-100 text-slate-700";
 
     return (
-      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${cls}`}>
+      <span
+        className={`inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize sm:px-3 sm:text-xs ${cls}`}
+      >
         {value?.replaceAll("_", " ") || "-"}
       </span>
     );
   };
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col justify-between gap-4 rounded-[28px] bg-[#071726] p-5 text-white sm:flex-row sm:items-center">
-        <div>
-          <p className="text-sm text-[#f3d78d]">The Traditional Villa</p>
-          <h1 className="mt-1 text-2xl font-semibold">Bookings</h1>
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 px-2 py-3 sm:space-y-5 sm:px-4 lg:px-0 lg:py-0">
+      <div className="flex flex-col justify-between gap-4 rounded-[20px] bg-[#071726] p-4 text-white sm:rounded-[28px] sm:p-5 md:flex-row md:items-center">
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-[#f3d78d] sm:text-sm">
+            The Traditional Villa
+          </p>
+          <h1 className="mt-1 text-xl font-semibold leading-tight sm:text-2xl">
+            Bookings
+          </h1>
         </div>
 
         <button
           onClick={openAddModal}
-          className="flex items-center justify-center gap-2 rounded-2xl bg-[#b8862b] px-4 py-3 text-sm font-semibold"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#b8862b] px-4 py-3 text-sm font-semibold text-white sm:w-auto"
         >
           <Plus size={18} />
           Add Booking
         </button>
       </div>
 
-      <div className="card p-4">
+      <div className="card p-3 sm:p-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-          <div className="relative lg:col-span-2">
-            <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-[#b8862b]" />
-            <input
-              className="input !pl-12"
-              placeholder="Search name/phone"
-              value={filters.search}
-              onChange={(e) =>
-                setFilters((p) => ({ ...p, search: e.target.value }))
-              }
-            />
+          <div className="lg:col-span-2">
+            <Label>Search</Label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-[#b8862b]" />
+              <input
+                className="input !pl-11 text-sm"
+                placeholder="Search name / phone"
+                value={filters.search}
+                onChange={(e) =>
+                  setFilters((p) => ({ ...p, search: e.target.value }))
+                }
+              />
+            </div>
           </div>
 
-          <input
-            type="date"
-            className="input"
-            value={filters.from}
-            onChange={(e) =>
-              setFilters((p) => ({ ...p, from: e.target.value }))
-            }
-          />
+          <div>
+            <Label>From Date</Label>
+            <div onClick={() => openDatePicker(filterFromRef)}>
+              <input
+                ref={filterFromRef}
+                type="date"
+                className="input cursor-pointer text-sm"
+                value={filters.from}
+                onChange={(e) =>
+                  setFilters((p) => ({ ...p, from: e.target.value }))
+                }
+              />
+            </div>
+          </div>
 
-          <input
-            type="date"
-            className="input"
-            value={filters.to}
-            onChange={(e) =>
-              setFilters((p) => ({ ...p, to: e.target.value }))
-            }
-          />
+          <div>
+            <Label>To Date</Label>
+            <div onClick={() => openDatePicker(filterToRef)}>
+              <input
+                ref={filterToRef}
+                type="date"
+                className="input cursor-pointer text-sm"
+                value={filters.to}
+                onChange={(e) =>
+                  setFilters((p) => ({ ...p, to: e.target.value }))
+                }
+              />
+            </div>
+          </div>
 
-          <select
-            className="input"
-            value={filters.paymentStatus}
-            onChange={(e) =>
-              setFilters((p) => ({ ...p, paymentStatus: e.target.value }))
-            }
-          >
-            <option value="">Payment</option>
-            <option value="pending">Pending</option>
-            <option value="partial">Partial</option>
-            <option value="paid">Paid</option>
-          </select>
+          <div>
+            <Label>Payment Status</Label>
+            <select
+              className="input text-sm"
+              value={filters.paymentStatus}
+              onChange={(e) =>
+                setFilters((p) => ({ ...p, paymentStatus: e.target.value }))
+              }
+            >
+              <option value="">All Payments</option>
+              <option value="pending">Pending</option>
+              <option value="partial">Partial</option>
+              <option value="paid">Paid</option>
+            </select>
+          </div>
 
-          <button onClick={fetchBookings} className="btn-primary">
-            Filter
-          </button>
+          <div>
+            <Label>Action</Label>
+            <button
+              onClick={fetchBookings}
+              disabled={loading}
+              className="btn-primary w-full"
+            >
+              {loading ? "Loading..." : "Filter"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -371,19 +441,24 @@ export default function BookingsPage() {
                     </p>
                     <p className="text-xs text-[#6b7280]">{b.phone}</p>
                   </td>
+
                   <td className="px-5 py-4 text-[#6b7280]">
                     {b.checkInDate?.slice(0, 10)} →{" "}
                     {b.checkOutDate?.slice(0, 10)}
                   </td>
+
                   <td className="px-5 py-4">{b.totalGuests}</td>
+
                   <td className="px-5 py-4">
                     <p className="font-semibold">{money(b.finalAmount)}</p>
                     <p className="text-xs text-[#6b7280]">
                       Pending {money(b.remainingAmount)}
                     </p>
                   </td>
+
                   <td className="px-5 py-4">{badge(b.paymentStatus)}</td>
                   <td className="px-5 py-4">{badge(b.bookingStatus)}</td>
+
                   <td className="px-5 py-4">
                     <div className="flex justify-end gap-2">
                       <button
@@ -392,12 +467,14 @@ export default function BookingsPage() {
                       >
                         <Eye size={15} />
                       </button>
+
                       <button
                         onClick={() => openEditModal(b)}
-                        className="rounded-xl border border-[#eadcc5] px-3 py-2 text-xs"
+                        className="rounded-xl border border-[#eadcc5] px-3 py-2 text-xs font-semibold"
                       >
                         Edit
                       </button>
+
                       <button
                         onClick={() => deleteBooking(b._id)}
                         className="rounded-xl bg-red-50 px-3 py-2 text-red-600"
@@ -419,63 +496,89 @@ export default function BookingsPage() {
                   </td>
                 </tr>
               )}
+
+              {loading && (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-5 py-10 text-center text-[#6b7280]"
+                  >
+                    Loading bookings...
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
 
-        <div className="space-y-3 p-4 lg:hidden">
+        <div className="space-y-3 p-3 sm:p-4 lg:hidden">
+          {loading && (
+            <div className="rounded-3xl border border-[#eadcc5] bg-[#fffaf2] p-4 text-sm text-[#6b7280]">
+              Loading bookings...
+            </div>
+          )}
+
+          {!loading && bookings.length === 0 && (
+            <div className="rounded-3xl border border-[#eadcc5] bg-[#fffaf2] p-4 text-sm text-[#6b7280]">
+              No bookings found
+            </div>
+          )}
+
           {bookings.map((b) => (
             <div
               key={b._id}
-              className="rounded-3xl border border-[#eadcc5] bg-[#fffaf2] p-4"
+              className="rounded-3xl border border-[#eadcc5] bg-[#fffaf2] p-3 sm:p-4"
             >
-              <div className="flex justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-[#071726]">
+              <div className="flex flex-col gap-3 xs:flex-row xs:justify-between">
+                <div className="min-w-0">
+                  <p className="break-words text-sm font-semibold text-[#071726] sm:text-base">
                     {b.mainPersonName}
                   </p>
-                  <p className="text-xs text-[#6b7280]">{b.phone}</p>
+                  <p className="break-words text-xs text-[#6b7280]">
+                    {b.phone}
+                  </p>
                 </div>
-                {badge(b.paymentStatus)}
+
+                <div className="shrink-0">{badge(b.paymentStatus)}</div>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <div className="mt-4 grid grid-cols-1 gap-3 text-sm min-[360px]:grid-cols-2">
+                <MobileInfo label="Check-in" value={b.checkInDate?.slice(0, 10)} />
+                <MobileInfo label="Check-out" value={b.checkOutDate?.slice(0, 10)} />
+                <MobileInfo label="Amount" value={money(b.finalAmount)} />
+                <MobileInfo label="Guests" value={b.totalGuests} />
+                <MobileInfo
+                  label="Pending"
+                  value={money(b.remainingAmount)}
+                />
                 <div>
-                  <p className="text-xs text-[#6b7280]">Check-in</p>
-                  <p>{b.checkInDate?.slice(0, 10)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#6b7280]">Check-out</p>
-                  <p>{b.checkOutDate?.slice(0, 10)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#6b7280]">Amount</p>
-                  <p>{money(b.finalAmount)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#6b7280]">Guests</p>
-                  <p>{b.totalGuests}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
+                    Status
+                  </p>
+                  <div className="mt-1">{badge(b.bookingStatus)}</div>
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-3 gap-2">
+              <div className="mt-4 grid grid-cols-1 gap-2 min-[360px]:grid-cols-3">
                 <button
                   onClick={() => openViewModal(b)}
-                  className="rounded-2xl border border-[#eadcc5] px-3 py-2 text-sm"
+                  className="rounded-2xl border border-[#eadcc5] bg-white px-3 py-2 text-sm font-semibold text-[#071726]"
                 >
                   View
                 </button>
+
                 <button
                   onClick={() => openEditModal(b)}
-                  className="rounded-2xl bg-[#071726] px-3 py-2 text-sm text-white"
+                  className="rounded-2xl bg-[#071726] px-3 py-2 text-sm font-semibold text-white"
                 >
                   Edit
                 </button>
+
                 <button
                   onClick={() => deleteBooking(b._id)}
-                  className="rounded-2xl bg-red-50 px-4 py-2 text-red-600"
+                  className="flex items-center justify-center rounded-2xl bg-red-50 px-4 py-2 text-red-600"
                 >
-                  <Trash2 className="mx-auto" size={16} />
+                  <Trash2 size={16} />
                 </button>
               </div>
             </div>
@@ -484,26 +587,31 @@ export default function BookingsPage() {
       </div>
 
       {modalOpen && (
-        <div className="fixed inset-0 z-[80] flex items-end bg-black/50 p-3 sm:items-center sm:justify-center">
-          <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-[28px] bg-white p-5 shadow-2xl">
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-[#071726]">
+        <div className="fixed inset-0 z-[80] flex items-end bg-black/50 p-2 sm:items-center sm:justify-center sm:p-3">
+          <div className="max-h-[94vh] w-full max-w-5xl overflow-y-auto rounded-t-[24px] bg-white p-4 shadow-2xl sm:rounded-[28px] sm:p-5">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-[#071726] sm:text-xl">
                 {editingBooking ? "Edit Booking" : "Add Booking"}
               </h2>
-              <button onClick={() => setModalOpen(false)}>
-                <X />
+
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                className="rounded-full bg-[#fffaf2] p-2 text-[#071726]"
+              >
+                <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={saveBooking} className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
+            <form onSubmit={saveBooking} className="space-y-5 sm:space-y-6">
+              <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
                 <div>
                   <Label>Main Person Name</Label>
                   <input
                     name="mainPersonName"
                     value={form.mainPersonName}
                     onChange={handleChange}
-                    className="input"
+                    className="input text-sm"
                     placeholder="Main person name"
                   />
                 </div>
@@ -520,8 +628,9 @@ export default function BookingsPage() {
                         phone: e.target.value.replace(/\D/g, ""),
                       }))
                     }
-                    className="input"
-                    placeholder="Phone"
+                    className="input text-sm"
+                    placeholder="Phone number"
+                    inputMode="numeric"
                   />
                 </div>
 
@@ -537,8 +646,9 @@ export default function BookingsPage() {
                         alternatePhone: e.target.value.replace(/\D/g, ""),
                       }))
                     }
-                    className="input"
+                    className="input text-sm"
                     placeholder="Alternate phone"
+                    inputMode="numeric"
                   />
                 </div>
 
@@ -548,7 +658,7 @@ export default function BookingsPage() {
                     name="bookingSource"
                     value={form.bookingSource}
                     onChange={handleChange}
-                    className="input"
+                    className="input text-sm"
                   >
                     <option value="direct">Direct</option>
                     <option value="airbnb">Airbnb</option>
@@ -562,24 +672,30 @@ export default function BookingsPage() {
 
                 <div>
                   <Label>Check-In Date</Label>
-                  <input
-                    type="date"
-                    name="checkInDate"
-                    value={form.checkInDate}
-                    onChange={handleChange}
-                    className="input"
-                  />
+                  <div onClick={() => openDatePicker(checkInRef)}>
+                    <input
+                      ref={checkInRef}
+                      type="date"
+                      name="checkInDate"
+                      value={form.checkInDate}
+                      onChange={handleChange}
+                      className="input cursor-pointer text-sm"
+                    />
+                  </div>
                 </div>
 
                 <div>
                   <Label>Check-Out Date</Label>
-                  <input
-                    type="date"
-                    name="checkOutDate"
-                    value={form.checkOutDate}
-                    onChange={handleChange}
-                    className="input"
-                  />
+                  <div onClick={() => openDatePicker(checkOutRef)}>
+                    <input
+                      ref={checkOutRef}
+                      type="date"
+                      name="checkOutDate"
+                      value={form.checkOutDate}
+                      onChange={handleChange}
+                      className="input cursor-pointer text-sm"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -589,8 +705,9 @@ export default function BookingsPage() {
                     name="adults"
                     value={form.adults}
                     onChange={handleChange}
-                    className="input"
+                    className="input text-sm"
                     placeholder="Adults"
+                    min="0"
                   />
                 </div>
 
@@ -601,8 +718,9 @@ export default function BookingsPage() {
                     name="children"
                     value={form.children}
                     onChange={handleChange}
-                    className="input"
+                    className="input text-sm"
                     placeholder="Children"
+                    min="0"
                   />
                 </div>
 
@@ -613,8 +731,9 @@ export default function BookingsPage() {
                     name="pricePerDay"
                     value={form.pricePerDay}
                     onChange={handleChange}
-                    className="input"
+                    className="input text-sm"
                     placeholder="Price per day"
+                    min="0"
                   />
                 </div>
 
@@ -625,8 +744,9 @@ export default function BookingsPage() {
                     name="discount"
                     value={form.discount}
                     onChange={handleChange}
-                    className="input"
+                    className="input text-sm"
                     placeholder="Discount"
+                    min="0"
                   />
                 </div>
 
@@ -637,8 +757,9 @@ export default function BookingsPage() {
                     name="advancePaid"
                     value={form.advancePaid}
                     onChange={handleChange}
-                    className="input"
+                    className="input text-sm"
                     placeholder="Advance paid"
+                    min="0"
                   />
                 </div>
 
@@ -648,7 +769,7 @@ export default function BookingsPage() {
                     name="paymentMode"
                     value={form.paymentMode}
                     onChange={handleChange}
-                    className="input"
+                    className="input text-sm"
                   >
                     <option value="cash">Cash</option>
                     <option value="upi">UPI</option>
@@ -660,7 +781,7 @@ export default function BookingsPage() {
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-[#eadcc5] bg-[#fffaf2] p-4">
+              <div className="rounded-3xl border border-[#eadcc5] bg-[#fffaf2] p-3 sm:p-4">
                 <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                   <div>
                     <h3 className="font-semibold text-[#071726]">
@@ -674,7 +795,7 @@ export default function BookingsPage() {
                   <button
                     type="button"
                     onClick={addGuest}
-                    className="rounded-2xl bg-[#071726] px-4 py-2 text-sm font-semibold text-white"
+                    className="w-full rounded-2xl bg-[#071726] px-4 py-2.5 text-sm font-semibold text-white sm:w-auto"
                   >
                     + Add Guest
                   </button>
@@ -684,18 +805,18 @@ export default function BookingsPage() {
                   {form.guests.map((guest, index) => (
                     <div
                       key={index}
-                      className="rounded-2xl border border-[#eadcc5] bg-white p-4"
+                      className="rounded-2xl border border-[#eadcc5] bg-white p-3 sm:p-4"
                     >
-                      <div className="mb-3 flex items-center justify-between">
+                      <div className="mb-3 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                         <p className="text-sm font-semibold text-[#071726]">
                           Guest {index + 1} Details
                         </p>
 
-                        <div className="flex gap-2">
+                        <div className="grid grid-cols-2 gap-2 sm:flex">
                           <button
                             type="button"
                             onClick={() => setMainGuest(index)}
-                            className={`rounded-xl px-3 py-1 text-xs font-semibold ${
+                            className={`rounded-xl px-3 py-2 text-xs font-semibold ${
                               guest.isMainPerson
                                 ? "bg-[#b8862b] text-white"
                                 : "bg-[#fff3d8] text-[#9a6a16]"
@@ -707,7 +828,7 @@ export default function BookingsPage() {
                           <button
                             type="button"
                             onClick={() => removeGuest(index)}
-                            className="rounded-xl bg-red-50 px-3 py-1 text-xs font-semibold text-red-600"
+                            className="rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600"
                           >
                             Remove
                           </button>
@@ -722,7 +843,7 @@ export default function BookingsPage() {
                             onChange={(e) =>
                               handleGuestChange(index, "name", e.target.value)
                             }
-                            className="input"
+                            className="input text-sm"
                             placeholder="Guest name"
                           />
                         </div>
@@ -735,8 +856,9 @@ export default function BookingsPage() {
                             onChange={(e) =>
                               handleGuestChange(index, "age", e.target.value)
                             }
-                            className="input"
+                            className="input text-sm"
                             placeholder="Age"
+                            min="0"
                           />
                         </div>
 
@@ -751,9 +873,9 @@ export default function BookingsPage() {
                                 e.target.value
                               )
                             }
-                            className="input"
+                            className="input text-sm"
                           >
-                            <option value="">Gender</option>
+                            <option value="">Select Gender</option>
                             <option value="male">Male</option>
                             <option value="female">Female</option>
                             <option value="other">Other</option>
@@ -771,9 +893,9 @@ export default function BookingsPage() {
                                 e.target.value
                               )
                             }
-                            className="input"
+                            className="input text-sm"
                           >
-                            <option value="">ID Type</option>
+                            <option value="">Select ID Type</option>
                             <option value="aadhaar">Aadhaar</option>
                             <option value="pan">PAN</option>
                             <option value="passport">Passport</option>
@@ -795,7 +917,7 @@ export default function BookingsPage() {
                                 e.target.value
                               )
                             }
-                            className="input"
+                            className="input text-sm"
                             placeholder="ID Number"
                           />
                         </div>
@@ -811,7 +933,7 @@ export default function BookingsPage() {
                   name="notes"
                   value={form.notes}
                   onChange={handleChange}
-                  className="input min-h-24"
+                  className="input min-h-24 resize-none text-sm"
                   placeholder="Notes"
                 />
               </div>
@@ -829,26 +951,33 @@ export default function BookingsPage() {
       )}
 
       {viewModalOpen && selectedBooking && (
-        <div className="fixed inset-0 z-[90] flex items-end bg-black/50 p-3 sm:items-center sm:justify-center">
-          <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[28px] bg-white p-5 shadow-2xl">
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-[#071726]">
+        <div className="fixed inset-0 z-[90] flex items-end bg-black/50 p-2 sm:items-center sm:justify-center sm:p-3">
+          <div className="max-h-[94vh] w-full max-w-4xl overflow-y-auto rounded-t-[24px] bg-white p-4 shadow-2xl sm:rounded-[28px] sm:p-5">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-[#071726] sm:text-xl">
                 Booking Details
               </h2>
-              <button onClick={() => setViewModalOpen(false)}>
-                <X />
+
+              <button
+                type="button"
+                onClick={() => setViewModalOpen(false)}
+                className="rounded-full bg-[#fffaf2] p-2 text-[#071726]"
+              >
+                <X size={18} />
               </button>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="rounded-3xl bg-[#071726] p-5 text-white md:col-span-3">
-                <p className="text-sm text-[#f3d78d]">
+            <div className="grid gap-3 sm:gap-4 md:grid-cols-3">
+              <div className="rounded-3xl bg-[#071726] p-4 text-white sm:p-5 md:col-span-3">
+                <p className="break-words text-sm text-[#f3d78d]">
                   {selectedBooking.mainPersonName}
                 </p>
-                <h3 className="mt-1 text-2xl font-semibold">
+
+                <h3 className="mt-1 break-words text-xl font-semibold sm:text-2xl">
                   {money(selectedBooking.finalAmount)}
                 </h3>
-                <p className="mt-2 text-sm text-white/70">
+
+                <p className="mt-2 text-xs text-white/70 sm:text-sm">
                   {selectedBooking.checkInDate?.slice(0, 10)} →{" "}
                   {selectedBooking.checkOutDate?.slice(0, 10)}
                 </p>
@@ -888,7 +1017,7 @@ export default function BookingsPage() {
                 value={selectedBooking.paymentMode?.replaceAll("_", " ")}
               />
 
-              <div className="rounded-3xl border border-[#eadcc5] bg-[#fffaf2] p-4 md:col-span-3">
+              <div className="rounded-3xl border border-[#eadcc5] bg-[#fffaf2] p-3 sm:p-4 md:col-span-3">
                 <h3 className="mb-3 font-semibold text-[#071726]">
                   Guest Members
                 </h3>
@@ -897,27 +1026,28 @@ export default function BookingsPage() {
                   {(selectedBooking.guests || []).map((guest, index) => (
                     <div
                       key={index}
-                      className="rounded-2xl bg-white p-4 text-sm"
+                      className="rounded-2xl bg-white p-3 text-sm sm:p-4"
                     >
-                      <div className="flex flex-col justify-between gap-2 sm:flex-row">
-                        <div>
-                          <p className="font-semibold text-[#071726]">
+                      <div className="flex flex-col justify-between gap-3 sm:flex-row">
+                        <div className="min-w-0">
+                          <p className="break-words font-semibold text-[#071726]">
                             {guest.name || "-"}{" "}
                             {guest.isMainPerson && (
-                              <span className="ml-2 rounded-full bg-[#b8862b] px-2 py-0.5 text-[10px] text-white">
+                              <span className="ml-1 inline-flex rounded-full bg-[#b8862b] px-2 py-0.5 text-[10px] text-white">
                                 Main
                               </span>
                             )}
                           </p>
-                          <p className="text-xs text-[#6b7280]">
+
+                          <p className="mt-1 text-xs text-[#6b7280]">
                             Age: {guest.age || "-"} • Gender:{" "}
                             {guest.gender || "-"}
                           </p>
                         </div>
 
-                        <div className="text-left sm:text-right">
+                        <div className="min-w-0 text-left sm:text-right">
                           <p className="text-xs text-[#6b7280]">ID Proof</p>
-                          <p className="capitalize text-[#071726]">
+                          <p className="break-words capitalize text-[#071726]">
                             {guest.idType?.replaceAll("_", " ") || "-"}{" "}
                             {guest.idNumber ? `• ${guest.idNumber}` : ""}
                           </p>
@@ -937,7 +1067,7 @@ export default function BookingsPage() {
 
               <div className="rounded-3xl border border-[#eadcc5] bg-white p-4 md:col-span-3">
                 <p className="text-xs text-[#6b7280]">Notes</p>
-                <p className="mt-1 text-sm text-[#071726]">
+                <p className="mt-1 break-words text-sm text-[#071726]">
                   {selectedBooking.notes || "-"}
                 </p>
               </div>
@@ -949,11 +1079,24 @@ export default function BookingsPage() {
   );
 }
 
+function MobileInfo({ label, value }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">
+        {label}
+      </p>
+      <p className="mt-1 break-words font-medium text-[#071726]">
+        {value || "-"}
+      </p>
+    </div>
+  );
+}
+
 function Info({ label, value }) {
   return (
-    <div className="rounded-3xl border border-[#eadcc5] bg-[#fffaf2] p-4">
+    <div className="min-w-0 rounded-3xl border border-[#eadcc5] bg-[#fffaf2] p-4">
       <p className="text-xs text-[#6b7280]">{label}</p>
-      <p className="mt-1 font-semibold capitalize text-[#071726]">
+      <p className="mt-1 break-words font-semibold capitalize text-[#071726]">
         {value || "-"}
       </p>
     </div>

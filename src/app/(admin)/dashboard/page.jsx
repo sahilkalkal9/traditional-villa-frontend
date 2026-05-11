@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CalendarCheck,
   CalendarClock,
@@ -16,15 +17,33 @@ const formatMoney = (amount) => {
 };
 
 export default function DashboardPage() {
+  const router = useRouter();
+
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const logoutAndRedirect = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    toast.error("Session expired. Please login again.");
+    router.replace("/login");
+  };
 
   const fetchDashboard = async () => {
     try {
       setLoading(true);
+
       const { data } = await api.get("/dashboard");
-      setStats(data.stats);
+      setStats(data?.stats || {});
     } catch (error) {
+      const status = error?.response?.status;
+
+      if (status === 401 || status === 403) {
+        logoutAndRedirect();
+        return;
+      }
+
       toast.error(error?.response?.data?.message || "Dashboard load failed");
     } finally {
       setLoading(false);
@@ -33,30 +52,42 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchDashboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {
-    return <div className="text-[#071726]">Loading dashboard...</div>;
+    return (
+      <div className="min-h-[50vh] w-full px-3 py-4 sm:px-5">
+        <div className="rounded-2xl bg-white p-4 text-sm font-medium text-[#071726] shadow-sm">
+          Loading dashboard...
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-[28px] bg-gradient-to-br from-[#071726] to-[#102b45] p-5 text-white shadow-xl sm:p-7">
-        <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
-          <div>
-            <p className="text-sm text-[#f3d78d]">The Traditional Villa</p>
-            <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 px-2 py-3 sm:space-y-6 sm:px-4 sm:py-5 lg:px-0 lg:py-0">
+      <section className="w-full rounded-[20px] bg-gradient-to-br from-[#071726] to-[#102b45] p-4 text-white shadow-xl sm:rounded-[28px] sm:p-7">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-[#f3d78d] sm:text-sm">
+              The Traditional Villa
+            </p>
+
+            <h1 className="mt-2 break-words text-xl font-semibold leading-tight sm:text-3xl">
               Dashboard Overview
             </h1>
-            <p className="mt-2 max-w-2xl text-sm text-white/70">
+
+            <p className="mt-2 max-w-2xl text-xs leading-5 text-white/70 sm:text-sm">
               High level booking, payment, expense and profit/loss summary.
             </p>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/10 p-4">
+          <div className="w-full rounded-2xl border border-white/10 bg-white/10 p-4 sm:w-auto sm:min-w-[210px] sm:rounded-3xl">
             <p className="text-xs text-white/60">Profit / Loss</p>
+
             <p
-              className={`mt-1 text-2xl font-semibold ${
+              className={`mt-1 break-words text-xl font-semibold leading-tight sm:text-2xl ${
                 Number(stats?.profitLoss || 0) >= 0
                   ? "text-[#f3d78d]"
                   : "text-red-300"
@@ -68,7 +99,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         <StatCard
           title="Total Revenue"
           value={formatMoney(stats?.totalRevenue)}
@@ -91,47 +122,39 @@ export default function DashboardPage() {
         />
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="card p-5">
-          <CalendarCheck className="text-[#b8862b]" size={24} />
-          <p className="mt-4 text-sm text-[#6b7280]">Total Bookings</p>
-          <h3 className="mt-1 text-2xl font-semibold text-[#071726]">
-            {stats?.totalBookings || 0}
-          </h3>
-        </div>
+      <section className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
+        <DashboardInfoCard
+          icon={CalendarCheck}
+          label="Total Bookings"
+          value={stats?.totalBookings || 0}
+        />
 
-        <div className="card p-5">
-          <CalendarClock className="text-[#b8862b]" size={24} />
-          <p className="mt-4 text-sm text-[#6b7280]">Upcoming Bookings</p>
-          <h3 className="mt-1 text-2xl font-semibold text-[#071726]">
-            {stats?.upcomingBookings || 0}
-          </h3>
-        </div>
+        <DashboardInfoCard
+          icon={CalendarClock}
+          label="Upcoming Bookings"
+          value={stats?.upcomingBookings || 0}
+        />
 
-        <div className="card p-5">
-          <IndianRupee className="text-[#b8862b]" size={24} />
-          <p className="mt-4 text-sm text-[#6b7280]">Pending Payments</p>
-          <h3 className="mt-1 text-2xl font-semibold text-[#071726]">
-            {stats?.pendingPayments || 0}
-          </h3>
-        </div>
+        <DashboardInfoCard
+          icon={IndianRupee}
+          label="Pending Payments"
+          value={stats?.pendingPayments || 0}
+        />
 
-        <div className="card p-5">
-          <TrendingUp className="text-[#b8862b]" size={24} />
-          <p className="mt-4 text-sm text-[#6b7280]">Cash Flow</p>
-          <h3 className="mt-1 text-2xl font-semibold text-[#071726]">
-            {formatMoney(stats?.cashFlow)}
-          </h3>
-        </div>
+        <DashboardInfoCard
+          icon={TrendingUp}
+          label="Cash Flow"
+          value={formatMoney(stats?.cashFlow)}
+        />
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div className="card p-5">
-          <h2 className="text-lg font-semibold text-[#071726]">
+      <section className="grid w-full grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
+        <div className="card min-w-0 p-4 sm:p-5">
+          <h2 className="text-base font-semibold text-[#071726] sm:text-lg">
             Expense Breakdown
           </h2>
 
-          <div className="mt-5 space-y-4">
+          <div className="mt-4 space-y-3 sm:mt-5 sm:space-y-4">
             {[
               ["Rent", stats?.rentExpense],
               ["Electricity", stats?.electricityExpense],
@@ -140,10 +163,13 @@ export default function DashboardPage() {
             ].map(([label, value]) => (
               <div
                 key={label}
-                className="flex items-center justify-between rounded-2xl bg-[#fffaf2] p-4"
+                className="flex flex-col gap-1 rounded-2xl bg-[#fffaf2] p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4"
               >
-                <span className="text-sm text-[#6b7280]">{label}</span>
-                <span className="font-semibold text-[#071726]">
+                <span className="text-xs text-[#6b7280] sm:text-sm">
+                  {label}
+                </span>
+
+                <span className="break-words text-sm font-semibold text-[#071726] sm:text-base">
                   {formatMoney(value)}
                 </span>
               </div>
@@ -151,34 +177,62 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="card p-5">
-          <h2 className="text-lg font-semibold text-[#071726]">
+        <div className="card min-w-0 p-4 sm:p-5">
+          <h2 className="text-base font-semibold text-[#071726] sm:text-lg">
             Business Summary
           </h2>
 
-          <div className="mt-5 rounded-3xl bg-[#071726] p-5 text-white">
-            <p className="text-sm text-white/60">Formula</p>
-            <p className="mt-2 text-lg font-semibold text-[#f3d78d]">
+          <div className="mt-4 rounded-2xl bg-[#071726] p-4 text-white sm:mt-5 sm:rounded-3xl sm:p-5">
+            <p className="text-xs text-white/60 sm:text-sm">Formula</p>
+
+            <p className="mt-2 text-base font-semibold leading-snug text-[#f3d78d] sm:text-lg">
               Revenue - Expenses = Profit / Loss
             </p>
 
-            <div className="mt-5 space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span>Total Revenue</span>
-                <span>{formatMoney(stats?.totalRevenue)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Total Expenses</span>
-                <span>{formatMoney(stats?.totalExpenses)}</span>
-              </div>
-              <div className="border-t border-white/10 pt-3 flex justify-between font-semibold">
-                <span>Net P&L</span>
-                <span>{formatMoney(stats?.profitLoss)}</span>
+            <div className="mt-5 space-y-3 text-xs sm:text-sm">
+              <SummaryRow
+                label="Total Revenue"
+                value={formatMoney(stats?.totalRevenue)}
+              />
+
+              <SummaryRow
+                label="Total Expenses"
+                value={formatMoney(stats?.totalExpenses)}
+              />
+
+              <div className="flex items-start justify-between gap-3 border-t border-white/10 pt-3 font-semibold">
+                <span className="min-w-0">Net P&amp;L</span>
+                <span className="break-words text-right">
+                  {formatMoney(stats?.profitLoss)}
+                </span>
               </div>
             </div>
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+function DashboardInfoCard({ icon: Icon, label, value }) {
+  return (
+    <div className="card min-w-0 p-4 sm:p-5">
+      <Icon className="text-[#b8862b]" size={22} />
+
+      <p className="mt-4 text-xs text-[#6b7280] sm:text-sm">{label}</p>
+
+      <h3 className="mt-1 break-words text-xl font-semibold leading-tight text-[#071726] sm:text-2xl">
+        {value}
+      </h3>
+    </div>
+  );
+}
+
+function SummaryRow({ label, value }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="min-w-0 text-white/80">{label}</span>
+      <span className="break-words text-right font-medium">{value}</span>
     </div>
   );
 }
