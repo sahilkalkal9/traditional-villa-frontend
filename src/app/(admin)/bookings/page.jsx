@@ -41,6 +41,9 @@ const Label = ({ children }) => (
   </label>
 );
 
+const dateInputClass =
+  "input block w-full min-w-0 max-w-full appearance-none cursor-pointer overflow-hidden text-sm";
+
 const openDatePicker = (ref) => {
   if (!ref?.current) return;
 
@@ -342,13 +345,13 @@ export default function BookingsPage() {
       </div>
 
       <div className="card p-3 sm:p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-          <div className="lg:col-span-2">
+        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          <div className="min-w-0 lg:col-span-2">
             <Label>Search</Label>
-            <div className="relative">
+            <div className="relative min-w-0">
               <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-[#b8862b]" />
               <input
-                className="input !pl-11 text-sm"
+                className="input w-full min-w-0 !pl-11 text-sm"
                 placeholder="Search name / phone"
                 value={filters.search}
                 onChange={(e) =>
@@ -358,13 +361,16 @@ export default function BookingsPage() {
             </div>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <Label>From Date</Label>
-            <div onClick={() => openDatePicker(filterFromRef)}>
+            <div
+              className="min-w-0 w-full overflow-hidden"
+              onClick={() => openDatePicker(filterFromRef)}
+            >
               <input
                 ref={filterFromRef}
                 type="date"
-                className="input cursor-pointer text-sm !w-full"
+                className={dateInputClass}
                 value={filters.from}
                 onChange={(e) =>
                   setFilters((p) => ({ ...p, from: e.target.value }))
@@ -373,13 +379,16 @@ export default function BookingsPage() {
             </div>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <Label>To Date</Label>
-            <div onClick={() => openDatePicker(filterToRef)}>
+            <div
+              className="min-w-0 w-full overflow-hidden"
+              onClick={() => openDatePicker(filterToRef)}
+            >
               <input
                 ref={filterToRef}
                 type="date"
-                className="input cursor-pointer text-sm"
+                className={dateInputClass}
                 value={filters.to}
                 onChange={(e) =>
                   setFilters((p) => ({ ...p, to: e.target.value }))
@@ -388,10 +397,10 @@ export default function BookingsPage() {
             </div>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <Label>Payment Status</Label>
             <select
-              className="input text-sm"
+              className="input w-full min-w-0 text-sm"
               value={filters.paymentStatus}
               onChange={(e) =>
                 setFilters((p) => ({ ...p, paymentStatus: e.target.value }))
@@ -404,7 +413,7 @@ export default function BookingsPage() {
             </select>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <Label>Action</Label>
             <button
               onClick={fetchBookings}
@@ -543,8 +552,14 @@ export default function BookingsPage() {
               </div>
 
               <div className="mt-4 grid grid-cols-1 gap-3 text-sm min-[360px]:grid-cols-2">
-                <MobileInfo label="Check-in" value={b.checkInDate?.slice(0, 10)} />
-                <MobileInfo label="Check-out" value={b.checkOutDate?.slice(0, 10)} />
+                <MobileInfo
+                  label="Check-in"
+                  value={b.checkInDate?.slice(0, 10)}
+                />
+                <MobileInfo
+                  label="Check-out"
+                  value={b.checkOutDate?.slice(0, 10)}
+                />
                 <MobileInfo label="Amount" value={money(b.finalAmount)} />
                 <MobileInfo label="Guests" value={b.totalGuests} />
                 <MobileInfo
@@ -604,19 +619,19 @@ export default function BookingsPage() {
             </div>
 
             <form onSubmit={saveBooking} className="space-y-5 sm:space-y-6">
-              <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
-                <div>
+              <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                <div className="min-w-0">
                   <Label>Main Person Name</Label>
                   <input
                     name="mainPersonName"
                     value={form.mainPersonName}
                     onChange={handleChange}
-                    className="input text-sm"
+                    className="input w-full min-w-0 text-sm"
                     placeholder="Main person name"
                   />
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <Label>Phone Number</Label>
                   <input
                     name="phone"
@@ -628,13 +643,13 @@ export default function BookingsPage() {
                         phone: e.target.value.replace(/\D/g, ""),
                       }))
                     }
-                    className="input text-sm"
+                    className="input w-full min-w-0 text-sm"
                     placeholder="Phone number"
                     inputMode="numeric"
                   />
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <Label>Alternate Phone</Label>
                   <input
                     name="alternatePhone"
@@ -646,19 +661,19 @@ export default function BookingsPage() {
                         alternatePhone: e.target.value.replace(/\D/g, ""),
                       }))
                     }
-                    className="input text-sm"
+                    className="input w-full min-w-0 text-sm"
                     placeholder="Alternate phone"
                     inputMode="numeric"
                   />
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <Label>Booking Source</Label>
                   <select
                     name="bookingSource"
                     value={form.bookingSource}
                     onChange={handleChange}
-                    className="input text-sm"
+                    className="input w-full min-w-0 text-sm"
                   >
                     <option value="direct">Direct</option>
                     <option value="airbnb">Airbnb</option>
@@ -670,106 +685,112 @@ export default function BookingsPage() {
                   </select>
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <Label>Check-In Date</Label>
-                  <div onClick={() => openDatePicker(checkInRef)}>
+                  <div
+                    className="min-w-0 w-full overflow-hidden"
+                    onClick={() => openDatePicker(checkInRef)}
+                  >
                     <input
                       ref={checkInRef}
                       type="date"
                       name="checkInDate"
                       value={form.checkInDate}
                       onChange={handleChange}
-                      className="input cursor-pointer text-sm"
+                      className={dateInputClass}
                     />
                   </div>
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <Label>Check-Out Date</Label>
-                  <div onClick={() => openDatePicker(checkOutRef)}>
+                  <div
+                    className="min-w-0 w-full overflow-hidden"
+                    onClick={() => openDatePicker(checkOutRef)}
+                  >
                     <input
                       ref={checkOutRef}
                       type="date"
                       name="checkOutDate"
                       value={form.checkOutDate}
                       onChange={handleChange}
-                      className="input cursor-pointer text-sm"
+                      className={dateInputClass}
                     />
                   </div>
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <Label>Adults</Label>
                   <input
                     type="number"
                     name="adults"
                     value={form.adults}
                     onChange={handleChange}
-                    className="input text-sm"
+                    className="input w-full min-w-0 text-sm"
                     placeholder="Adults"
                     min="0"
                   />
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <Label>Children</Label>
                   <input
                     type="number"
                     name="children"
                     value={form.children}
                     onChange={handleChange}
-                    className="input text-sm"
+                    className="input w-full min-w-0 text-sm"
                     placeholder="Children"
                     min="0"
                   />
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <Label>Price Per Day</Label>
                   <input
                     type="number"
                     name="pricePerDay"
                     value={form.pricePerDay}
                     onChange={handleChange}
-                    className="input text-sm"
+                    className="input w-full min-w-0 text-sm"
                     placeholder="Price per day"
                     min="0"
                   />
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <Label>Discount</Label>
                   <input
                     type="number"
                     name="discount"
                     value={form.discount}
                     onChange={handleChange}
-                    className="input text-sm"
+                    className="input w-full min-w-0 text-sm"
                     placeholder="Discount"
                     min="0"
                   />
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <Label>Advance Paid</Label>
                   <input
                     type="number"
                     name="advancePaid"
                     value={form.advancePaid}
                     onChange={handleChange}
-                    className="input text-sm"
+                    className="input w-full min-w-0 text-sm"
                     placeholder="Advance paid"
                     min="0"
                   />
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <Label>Payment Mode</Label>
                   <select
                     name="paymentMode"
                     value={form.paymentMode}
                     onChange={handleChange}
-                    className="input text-sm"
+                    className="input w-full min-w-0 text-sm"
                   >
                     <option value="cash">Cash</option>
                     <option value="upi">UPI</option>
@@ -835,20 +856,20 @@ export default function BookingsPage() {
                         </div>
                       </div>
 
-                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                        <div>
+                      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                        <div className="min-w-0">
                           <Label>Guest Name</Label>
                           <input
                             value={guest.name}
                             onChange={(e) =>
                               handleGuestChange(index, "name", e.target.value)
                             }
-                            className="input text-sm"
+                            className="input w-full min-w-0 text-sm"
                             placeholder="Guest name"
                           />
                         </div>
 
-                        <div>
+                        <div className="min-w-0">
                           <Label>Age</Label>
                           <input
                             type="number"
@@ -856,13 +877,13 @@ export default function BookingsPage() {
                             onChange={(e) =>
                               handleGuestChange(index, "age", e.target.value)
                             }
-                            className="input text-sm"
+                            className="input w-full min-w-0 text-sm"
                             placeholder="Age"
                             min="0"
                           />
                         </div>
 
-                        <div>
+                        <div className="min-w-0">
                           <Label>Gender</Label>
                           <select
                             value={guest.gender}
@@ -873,7 +894,7 @@ export default function BookingsPage() {
                                 e.target.value
                               )
                             }
-                            className="input text-sm"
+                            className="input w-full min-w-0 text-sm"
                           >
                             <option value="">Select Gender</option>
                             <option value="male">Male</option>
@@ -882,7 +903,7 @@ export default function BookingsPage() {
                           </select>
                         </div>
 
-                        <div>
+                        <div className="min-w-0">
                           <Label>ID Type</Label>
                           <select
                             value={guest.idType}
@@ -893,7 +914,7 @@ export default function BookingsPage() {
                                 e.target.value
                               )
                             }
-                            className="input text-sm"
+                            className="input w-full min-w-0 text-sm"
                           >
                             <option value="">Select ID Type</option>
                             <option value="aadhaar">Aadhaar</option>
@@ -906,7 +927,7 @@ export default function BookingsPage() {
                           </select>
                         </div>
 
-                        <div>
+                        <div className="min-w-0">
                           <Label>ID Number</Label>
                           <input
                             value={guest.idNumber}
@@ -917,7 +938,7 @@ export default function BookingsPage() {
                                 e.target.value
                               )
                             }
-                            className="input text-sm"
+                            className="input w-full min-w-0 text-sm"
                             placeholder="ID Number"
                           />
                         </div>
@@ -927,13 +948,13 @@ export default function BookingsPage() {
                 </div>
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <Label>Notes</Label>
                 <textarea
                   name="notes"
                   value={form.notes}
                   onChange={handleChange}
-                  className="input min-h-24 resize-none text-sm"
+                  className="input min-h-24 w-full min-w-0 resize-none text-sm"
                   placeholder="Notes"
                 />
               </div>
