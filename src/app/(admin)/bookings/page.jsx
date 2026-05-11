@@ -364,7 +364,7 @@ export default function BookingsPage() {
               <input
                 ref={filterFromRef}
                 type="date"
-                className="input cursor-pointer text-sm"
+                className="input cursor-pointer text-sm !w-full"
                 value={filters.from}
                 onChange={(e) =>
                   setFilters((p) => ({ ...p, from: e.target.value }))
